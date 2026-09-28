@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in — WAVE PTX Programming</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="login-shell">
+    <div class="login-card">
+      <div class="brand"><span class="dot"></span> WAVE&nbsp;PTX <small>Programming</small></div>
+      <div class="tag">Member sign-in</div>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}<div class="err">{{ messages[0] }}</div>{% endif %}
+      {% endwith %}
+      <form method="post">
+        <label>Username</label>
+        <input name="username" autofocus required>
+        <label>Password</label>
+        <input name="password" type="password" required>
+        <button class="btn" type="submit">Sign in</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

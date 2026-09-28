@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Programming — WAVE PTX</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span> WAVE&nbsp;PTX <small>Programming Dashboard</small></div>
+    <div class="userbox">{{ user }} <a href="{{ url_for('logout') }}">Sign out</a></div>
+  </div>
+
+  <div class="wrap">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}<div class="flash">{{ messages[0] }}</div>{% endif %}
+    {% endwith %}
+
+    <div class="card">
+      <h2>Broadcast schedule</h2>
+      <div class="sub">Timezone: {{ schedule.timezone or 'America/Chicago' }} &middot;
+        {{ (schedule.broadcasts or []) | length }} reminder(s) &middot; airs straight to the radios</div>
+      {% if schedule.broadcasts %}
+      <table>
+        <thead><tr><th>Time</th><th>Days</th><th>Prompt</th><th>Talk group</th><th></th></tr></thead>
+        <tbody>
+        {% for b in schedule.broadcasts %}
+          <tr>
+            <td class="time">{{ b.time }}</td>
+            <td>{% if b.days == 'all' %}<span class="pill">every day</span>{% else %}{{ b.days | join(', ') }}{% endif %}</td>
+            <td>{{ b.label or b.audio }}</td>
+            <td><span class="pill">{{ b.talkgroup }}</span></td>
+            <td style="text-align:right">
+              <form method="post" action="{{ url_for('delete_broadcast', idx=loop.index0) }}">
+                <button class="btn btn-ghost" type="submit">Remove</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty">No reminders scheduled yet. Add one below.</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Prompt rules</h2>
+      <div class="sub">Remove prompt rules one by one. Each removal also clears matching scheduled broadcasts.</div>
+      {% set prompt_rules = schedule.get('prompt_rules', []) %}
+      {% if prompt_rules %}
+      <ul class="promptlist">
+        {% for rule in prompt_rules %}
+        <li>
+          <span class="ic">✎</span>
+          <strong>{{ rule.label or rule.audio }}</strong>
+          <div class="sub" style="margin-top:4px;">
+            {% if rule.get('days') == 'all' %}Every day{% else %}{{ rule.get('days', []) | join(', ') }}{% endif %}
+            &middot; {{ rule.get('times', []) | join(', ') }}
+          </div>
+          <form method="post" action="{{ url_for('delete_prompt_rule_route', idx=loop.index0) }}" style="display:inline; margin-left:8px;">
+            <button class="btn btn-ghost" type="submit">Remove</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="empty">No prompt rules yet.</div>
+      {% endif %}
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Schedule a reminder</h2>
+        <div class="sub">Pick a prompt and when it should air.</div>
+        <form method="post" action="{{ url_for('add_broadcast') }}">
+          <label>Time (24h)</label>
+          <input name="time" type="time" required>
+          <label>Days</label>
+          <div class="daypick">
+            <label><input type="checkbox" name="days" value="all" checked> Every day</label>
+            {% for d in days %}<label><input type="checkbox" name="days" value="{{ d }}"> {{ d|capitalize }}</label>{% endfor %}
+          </div>
+          <label>Prompt</label>
+          <select name="audio" required>
+            {% for p in prompts %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+          </select>
+          <label>Talk group</label>
+          <input name="talkgroup" value="all-restaurants">
+          <label>Label (optional)</label>
+          <input name="label" placeholder="e.g. Opening procedures">
+          <button class="btn" type="submit">Schedule it</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Prompt rule entry</h2>
+        <div class="sub">Enter one prompt rule at a time using the form below.</div>
+        <form method="post" action="{{ url_for('import_schedule') }}">
+          <label>Label</label>
+          <input name="label" placeholder="Leadership Greetings" required>
+          <label>Character</label>
+          <select name="character">
+            <option value="Sarge">Sarge</option>
+            <option value="Doc">Doc</option>
+            <option value="Professor">Professor</option>
+            <option value="Coach">Coach</option>
+            <option value="Tex">Tex</option>
+          </select>
+          <label>Prompt type</label>
+          <input name="prompt_type" value="Shift Prompts">
+          <label>Frequency</label>
+          <input name="frequency" value="7X A DAY">
+          <label>Times</label>
+          <textarea name="times" rows="4" placeholder="8:00 AM&#10;11:00 AM&#10;2:00 PM"></textarea>
+          <label>Prompt audio file</label>
+          <select name="audio_name" required>
+            {% for p in prompts %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+          </select>
+          <label>Talk group</label>
+          <input name="talkgroup" value="all-restaurants">
+          <label>Days</label>
+          <div class="daypick">
+            <label><input type="checkbox" name="days" value="all" checked> Every day</label>
+            {% for d in days %}<label><input type="checkbox" name="days" value="{{ d }}"> {{ d|capitalize }}</label>{% endfor %}
+          </div>
+          <button class="btn" type="submit">Save rule</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Prompts</h2>
+        <div class="sub">{{ prompts | length }} audio file(s) in the library.</div>
+        {% if prompts %}
+        <ul class="promptlist">
+          {% for p in prompts %}
+          <li style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <span><span class="ic">&#9835;</span> {{ p }}</span>
+            <form method="post" action="{{ url_for('delete_prompt', filename=p) }}" style="margin:0;">
+              <button class="btn btn-ghost" type="submit">Remove</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+          <div class="empty">No prompts yet — upload one.</div>
+        {% endif %}
+        <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+          <label>Upload a prompt (.mp3 / .wav)</label>
+          <input name="file" type="file" accept=".mp3,.wav" required>
+          <button class="btn" type="submit">Upload</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
